@@ -38,7 +38,6 @@ array<double, n_freqs_kept> mut_freq_init(double time) {
 array<double, n_freqs_kept> mut_freq_update(double time, ) {
   // Yes, ugly as I hard-code the number of Infty.
   // Check present. If not, signal an error.
-  
   array<double, n_freqs_kept> out = {time, Infty, Infty, Infty, Infty, Infty};
   return out;
 }
@@ -54,8 +53,7 @@ void update_mutation_freqs(const vector<int>& newMutations,
 
 // at each pop update, update it
 
-
-// convert gene int names to names
+// At end, convert gene int names to names
 
 
 
