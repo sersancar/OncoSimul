@@ -1,4 +1,4 @@
-## Copyright 2013, 2014, 2015 Ramon Diaz-Uriarte
+## Copyright 2013, 2014, 2015, 2016 Ramon Diaz-Uriarte
 
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -702,7 +702,7 @@ evalAllGenotypes <- function(fitnessEffects, order = TRUE, max = 256,
     df <- data.frame(Genotype = genotNames, Fitness = allf,
                      stringsAsFactors = FALSE)
     if(addwt)
-        df <- rbind(data.frame(Genotype = "wt", Fitness = 1,
+        df <- rbind(data.frame(Genotype = "WT", Fitness = 1,
                                stringsAsFactors = FALSE), df)
     if(prodNeg)
         colnames(df)[match("Fitness", colnames(df))] <- "Death_rate"
@@ -832,7 +832,7 @@ nr_oncoSimul.internal <- function(rFE,
                                   ratioForce,
                                   typeFitness,
                                   max.memory,
-                                  mutatorGenotype,
+                                  mutationPropGrowth,
                                   initMutant,
                                   max.wall.time,
                                   keepEvery,
@@ -925,7 +925,7 @@ nr_oncoSimul.internal <- function(rFE,
                  ratioForce = ratioForce,
                  typeFitness_ = typeFitness,
                  maxram = max.memory,
-                 mutatorGenotype = mutatorGenotype,
+                 mutationPropGrowth = as.integer(mutationPropGrowth),
                  initMutant_ = initMutant, 
                  maxWallTime = max.wall.time,
                  keepEvery = keepEvery,
