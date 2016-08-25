@@ -1,0 +1,8 @@
+This was the former master. Branched here at the point where this version,
+with Rnw is fully working (it is what would become 2.3.13) and is not
+using Rmd.
+
+This was branched to become the rmd branch, that gave the first BioC
+version with Rmd (2.3.13) and was then merged into master.
+
+Note there is also a tag/release, 2.3.13-last-pre-Rmd.
