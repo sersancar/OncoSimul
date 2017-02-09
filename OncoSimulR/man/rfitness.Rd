@@ -11,8 +11,8 @@
 \usage{
 
 rfitness(g, c = 0.5, sd = 1, reference = "random", scale = NULL,
-         wt_is_1 = c("divide", "subtract", "force", "no"),
-         log = FALSE, min_accessible_genotypes = 0,
+         wt = 1,
+         log = FALSE, min_accessible_genotypes = NULL,
          accessible_th = 0)
 }
 
@@ -47,6 +47,20 @@ rfitness(g, c = 0.5, sd = 1, reference = "random", scale = NULL,
   two-element vector, fitness is re-scaled between \code{scale[1]} (the
   minimum) and \code{scale[2]} (the maximum).}
 
+\item{wt}{The desired fitness value of the wildtype (the genotype with
+  no mutations). If NULL, nothing is done to change the value of the wildtype.
+
+  If you pass a value and \code{scale} is set to NULL, we simply shift
+  all the fitness values to ensure the wildtype has fitness of 1. If
+  \code{scale} is not null, we use a simple linear transformation so
+  that the wildtype, the max. and the min. of the fitnessese equal your
+  specified \code{wt}, \code{scale[2]} and \code{scale[1]}, respectively.
+
+  If you pass a NULL here but pass \code{scale}, the min and max are
+  changed as per your request, and the value of wt is unchanged.
+
+}
+
 \item{wt_is_1}{If "divide" (the default) the fitness of all genotypes is
   divided by the fitness of the wildtype (after possibly adding a value
   to ensure no negative fitness) so that the wildtype (the genotype with
@@ -76,7 +90,7 @@ rfitness(g, c = 0.5, sd = 1, reference = "random", scale = NULL,
 
 \item{log}{If TRUE, log-transform fitness.}
 
-\item{min_accessible_genotypes}{If larger than 0, the minimum number of
+\item{min_accessible_genotypes}{If not NULL, the minimum number of
   accessible genotypes in the fitness landscape. A genotype is
   considered accessible if you can reach if from the wildtype by going
   through at least one path where all changes in fitness are larger or
@@ -91,6 +105,9 @@ rfitness(g, c = 0.5, sd = 1, reference = "random", scale = NULL,
   If the condition is not satisfied, we continue generating random
   fitness landscapes with the specified parameters until the condition
   is satisfied.
+
+  (Why check against NULL and not against zero? Because this allows you
+  to count accessible genotypes even if you do not want to restrict.)
 }
 
 \item{accessible_th}{The threshold for the minimal change in fitness at

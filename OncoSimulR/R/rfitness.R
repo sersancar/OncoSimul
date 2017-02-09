@@ -1,3 +1,31 @@
+## Copyright 2013, 2014, 2015, 2016, 2017 Ramon Diaz-Uriarte
+
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+
+## You should have received a copy of the GNU General Public License
+## along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+## Does it even make sense to keepPhylog with oncoSimulSample?
+## Yes, but think what we store.
+
+
+
+## Left unfinshed. We could apply to linear transformations:
+
+## for x < wt and for x> wt, so that wt is 1, and we preserve the scaling
+## (i.e., the max of x is scale[2] and the min is scale[1])
+
+## I leave it here, but probably will not use it.
+
 rfitness <- function(g, c= 0.5,
                      sd = 1,
                      reference = "random", ## "random", "max", or the vector,
@@ -5,12 +33,13 @@ rfitness <- function(g, c= 0.5,
                                      ## random genotype is chosen as
                                      ## reference. If "max" this is rep(1, g)
                      scale = NULL, ## a two-element vector: min and max
-                     wt_is_1 = c("divide", "subtract", "force", "no"),
+                     wt = 1,
+                     ## wt_is_1 = c("divide", "subtract", "force", "no"),
                      ## wt_is_1 = TRUE, ## wt has fitness 1
                      log = FALSE, ## log only makes sense if all values >
                                  ## 0. scale with min > 0, and/or set
                                  ## wt_is_1 = divide
-                     min_accessible_genotypes = 0,
+                     min_accessible_genotypes = NULL,
                      accessible_th = 0) {
     ## Like Franke et al., 2011 and others of Krug. Very similar to Greene
     ## and Crona, 2014. And this allows moving from HoC to purely additive
@@ -72,7 +101,7 @@ rfitness <- function(g, c= 0.5,
             fi <- log(fi/fi[1]) + 1
         }
         m <- cbind(m, Fitness = fi)
-        if(min_accessible_genotypes > 0) {
+        if(!is.null(min_accessible_genotypes)) {
             ## num_accessible_genotypes <- count_accessible_g(m, accessible_th)
             ## Recall accessibleGenotypes includes the wt, if accessible.
             num_accessible_genotypes <- length(wrap_accessibleGenotypes(m, accessible_th)) - 1
