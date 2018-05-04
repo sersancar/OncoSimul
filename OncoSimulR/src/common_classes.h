@@ -45,5 +45,20 @@ struct spParamsP {
 
 
 
+
+
+struct deme {
+  std::vector<spParamsP> popParams(1);
+  std::vector<Genotype> Genotypes(1);
+  std::multimap<double, int> mapTimes;
+  // something returned from nr_totPopSize...
+  // the clone sizes right before going to interdeme
+};
+
 #endif
+
+
+
+
+
 

@@ -167,6 +167,11 @@ TypeModel stringToModel(const std::string& mod) {
     return TypeModel::bozic1;
   else if(mod == "mcfarlandlog")
     return TypeModel::mcfarlandlog;
+  //SPATIAL
+  // algo para Moran
+   else if(mod == "moran")
+     return TypeModel::moran;
+  // 
   // else if(mod == "mcfarland")
   //   return TypeModel::mcfarland;
   // else if(mod == "beerenwinkel")

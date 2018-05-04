@@ -1012,6 +1012,31 @@ void computeMcFarlandError_new(double& em1,
 //   }
 // }
 
+// SPATIAL
+// usar algo como updateRatesMoran
+// y aquí actualizar el ajuste de la death rate para que tamanio
+// pobalcvion aprx constante
+
+
+void updateRatesMoran(std::vector<spParamsP>& popParams,
+		      const double& totPopSize) {
+
+  // We assume initial was already at the equilibrium
+
+  double adjust_r = 0.0;
+  for(size_t i = 0; i < popParams.size(); ++i) {
+    adjust_r += (popParams[i].birth - popParams[i]-death) *
+      popParams[i].popSize;
+  }  
+  adjust_r /= totPopSize;
+  
+  for(size_t i = 0; i < popParams.size(); ++i) {
+    popParams[i].death += adjust_r;
+    W_f_st(popParams[i]);
+    R_f_st(popParams[i]);
+  }
+}
+
 
 void updateRatesMcFarlandLog(std::vector<spParamsP>& popParams,
 			     double& adjust_fitness_MF,

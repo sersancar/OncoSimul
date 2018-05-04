@@ -2070,7 +2070,8 @@ nr_oncoSimul.internal <- function(rFE,
                      cPDetect_i= dpr["cPDetect"],
                      checkSizePEvery = dpr["checkSizePEvery"],
                      AND_DrvProbExit = AND_DrvProbExit,
-                     fixation_list = fixation_list),
+                     fixation_list = fixation_list,
+                     spatial_list = spatial_list),
         Drivers = list(rFE$drv), ## but when doing pops, these will be repeated
         geneNames = list(names(getNamesID(rFE))),
         InitMutant = initMutantString

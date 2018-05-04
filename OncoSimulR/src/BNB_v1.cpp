@@ -1630,7 +1630,11 @@ static void innerBNB(const int& numGenes,
 	updateRatesMcFarlandLog(popParams, adjust_fitness_MF,
 			     K, totPopSize);
       }
-      
+      // SPATIAL: olvidarse de la vetrsion v1 para siempre!!
+      // if (typeModel == TypeMOdel::moran) {
+      // updateRatesMoran()
+      // }
+
 #ifdef MIN_RATIO_MUTS
       // could go inside sample_all_pop but here we are sure death, etc, current
       // But I catch them when they are created. Is this really needed?

@@ -472,8 +472,11 @@ oncoSimulIndiv <- function(fp,
                            initMutant = NULL,
                            AND_DrvProbExit = FALSE,
                            fixation = NULL,
-                           seed = NULL
+                           seed = NULL,
+                           spatialParams = NULL,
                            ) {
+
+    ## SPATIAL
     call <- match.call()
     if(all(c(is_null_na(detectionProb),
              is_null_na(detectionSize),
@@ -503,6 +506,9 @@ oncoSimulIndiv <- function(fp,
                           "Exp" = "exp",
                           "McFarlandLog" = "mcfarlandlog",
                           "McFL" = "mcfarlandlog",
+                          "spatial" = "spatial",
+                          "Spatial" = "spatial",
+                          "Moran" = "moran",
                           stop("No valid value for model")
                           )
     if(initSize < 1)
