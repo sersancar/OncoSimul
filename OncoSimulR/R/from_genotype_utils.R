@@ -78,7 +78,7 @@ to_Fitness_Matrix <- function(x, max_num_genotypes) {
 
         ## Might not be needed with the proper gfm object (so gmf <- x)
         ## but is needed if arbitrary matrices.
-        gfm <- allGenotypes_to_matrix(afe) 
+        gfm <- allGenotypes_to_matrix(afe)
     } else if(inherits(x, "fitnessEffects")) {
         if(!is.null(x$orderEffects) )
             stop("We cannot yet deal with order effects")
@@ -105,153 +105,281 @@ to_Fitness_Matrix <- function(x, max_num_genotypes) {
         ## Assume a two-column data frame of genotypes as character
         ## vectors and fitness
         if(colnames(x)[2] != "Fitness")
-            stop("We cannot guess what you are passing here") 
+            stop("We cannot guess what you are passing here")
         afe <- evalAllGenotypes(allFitnessEffects(genotFitness = x),
                                 order = FALSE, addwt = TRUE,
                                 max = max_num_genotypes)
         gfm <- allGenotypes_to_matrix(afe)
     } else {
-        stop("We cannot guess what you are passing here") 
+        stop("We cannot guess what you are passing here")
     }
     return(list(gfm = gfm, afe = afe))
-}   
+}
 
 ## Based on from_genotype_fitness
 ## but if we are passed a fitness landscapes as produced by
 ## rfitness, do nothing
 
-to_genotFitness_std <- function(x, simplify = TRUE,
+##New function
+from_letters_to_vector_genotype <- function(letters_genotype) {
+
+  if(!all(unlist(strsplit(letters_genotype, ', ' ) ) %in% c(LETTERS,  letters, "")))
+    stop("All elements must be letters separated by ', '")
+
+  letters_genotype <-
+    paste(sort(unlist(strsplit(toupper(letters_genotype), ',') ) ),
+          collapse = ',')
+
+  if (letters_genotype == "") {
+    vector_genotype <- c()
+  }else{
+    vector_genotype <- sapply(unlist(strsplit(letters_genotype, ', ') ),
+                              function(x) {which(x == LETTERS ) },
+                              USE.NAMES = FALSE  )
+  }
+  return (as.vector(vector_genotype))
+}
+
+##New function
+replaceWithNumbers <- function(str){
+  locs <- gregexpr("f\\(([aA-zZ],? ?)*\\)", str)
+  regmatches(str, locs) <- list(sapply(regmatches(str, locs)[[1]], function(x) {
+    paste0("f(",
+           toString(from_letters_to_vector_genotype(sub(".*\\((.*)\\).*",
+                                                        "\\1",
+                                                        x))),
+           ")")
+  }))
+  return(str)
+}
+
+##Modified
+to_genotFitness_std <- function(x,
+                                frequencyDependentFitness,
+                                simplify = TRUE,
                                 min_filter_fitness = 1e-9,
                                 sort_gene_names = TRUE) {
-    ## Would break with output from allFitnessEffects and
-    ## output from allGenotypeAndMut
-    
-    ## For the very special and weird case of
-    ## a matrix but only a single gene so with a 0 and 1
-    ## No, this is a silly and meaningless case.
-    ## if( ( ncol(x) == 2 ) && (nrow(x) == 1) && (x[1, 1] == 1) ) {
-    
-    ## } else  blabla: 
-    
-    if(! (inherits(x, "matrix") || inherits(x, "data.frame")) )
-        stop("Input must inherit from matrix or data.frame.")
-    
-    ## if((ncol(x) > 2) && !(inherits(x, "matrix"))
-    ##     stop(paste0("Genotype fitness input either two-column data frame",
-    ##          " or a numeric matrix with > 2 columns."))
-    ## if( (ncol(x) > 2) && (nrow(x) == 1) )
-    ##     stop(paste0("It looks like you have a matrix for a single genotype",
-    ##                 " of a single gene. For this degenerate cases use",
-    ##                 " a data frame specification."))
-    
+  ## Would break with output from allFitnessEffects and
+  ## output from allGenotypeAndMut
+
+  ## For the very special and weird case of
+  ## a matrix but only a single gene so with a 0 and 1
+  ## No, this is a silly and meaningless case.
+  ## if( ( ncol(x) == 2 ) && (nrow(x) == 1) && (x[1, 1] == 1) ) {
+
+  ## } else  blabla:
+
+  if(! (inherits(x, "matrix") || inherits(x, "data.frame")) )
+    stop("Input must inherit from matrix or data.frame.")
+
+  ## if((ncol(x) > 2) && !(inherits(x, "matrix"))
+  ##     stop(paste0("Genotype fitness input either two-column data frame",
+  ##          " or a numeric matrix with > 2 columns."))
+  ## if( (ncol(x) > 2) && (nrow(x) == 1) )
+  ##     stop(paste0("It looks like you have a matrix for a single genotype",
+  ##                 " of a single gene. For this degenerate cases use",
+  ##                 " a data frame specification."))
+
+  if (!frequencyDependentFitness){
     if(ncol(x) > 2) {
-        if(inherits(x, "matrix")) {
-            if(!is.numeric(x))
-                stop("A genotype fitness matrix/data.frame must be numeric.")
-        } else if(inherits(x, "data.frame")) {
-            if(!all(unlist(lapply(x, is.numeric))))
-                stop("A genotype fitness matrix/data.frame must be numeric.")
+      if(inherits(x, "matrix")) {
+        if(!is.numeric(x))
+          stop("A genotype fitness matrix/data.frame must be numeric.")
+      } else if(inherits(x, "data.frame")) {
+        if(!all(unlist(lapply(x, is.numeric))))
+          stop("A genotype fitness matrix/data.frame must be numeric.")
+      }
+
+      ## We are expecting here a matrix of 0/1 where columns are genes
+      ## except for the last column, that is Fitness
+      ## Of course, can ONLY work with epistastis, NOT order
+      ## return(genot_fitness_to_epistasis(x))
+      if(any(duplicated(colnames(x))))
+        stop("duplicated column names")
+
+      cnfl <- which(colnames(x)[-ncol(x)] == "")
+      if(length(cnfl)) {
+        freeletter <- setdiff(LETTERS, colnames(x))[1]
+        if(length(freeletter) == 0) stop("Renaiming failed")
+        warning("One column named ''. Renaming to ", freeletter)
+        colnames(x)[cnfl] <- freeletter
+      }
+      if(!is.null(colnames(x)) && sort_gene_names) {
+        ncx <- ncol(x)
+        cnx <- colnames(x)[-ncx]
+        ocnx <- gtools::mixedorder(cnx)
+        if(!(identical(cnx[ocnx], cnx))) {
+          message("Sorting gene column names alphabetically")
+          x <- cbind(x[, ocnx, drop = FALSE], Fitness = x[, (ncx)])
         }
-        
-        ## We are expecting here a matrix of 0/1 where columns are genes
-        ## except for the last column, that is Fitness
-        ## Of course, can ONLY work with epistastis, NOT order
-        ## return(genot_fitness_to_epistasis(x))
-        if(any(duplicated(colnames(x))))
-            stop("duplicated column names")
-        
-        cnfl <- which(colnames(x)[-ncol(x)] == "")
-        if(length(cnfl)) {
-            freeletter <- setdiff(LETTERS, colnames(x))[1]
-            if(length(freeletter) == 0) stop("Renaiming failed")
-            warning("One column named ''. Renaming to ", freeletter)
-            colnames(x)[cnfl] <- freeletter
-        }
-        if(!is.null(colnames(x)) && sort_gene_names) {
-            ncx <- ncol(x)
-            cnx <- colnames(x)[-ncx]
-            ocnx <- gtools::mixedorder(cnx)
-            if(!(identical(cnx[ocnx], cnx))) {
-                message("Sorting gene column names alphabetically")
-                x <- cbind(x[, ocnx, drop = FALSE], Fitness = x[, (ncx)])
-            }
-        }
-        
-        if(is.null(colnames(x))) {
-            ncx <- (ncol(x) - 1)
-            message("No column names: assigning gene names from LETTERS")
-            if(ncx > length(LETTERS))
-                stop("More genes than LETTERS; please give gene names",
-                     " as you see fit.")
-            colnames(x) <- c(LETTERS[1:ncx], "Fitness")
-        }
-        
-        if(!all(as.matrix(x[, -ncol(x)]) %in% c(0, 1) ))
-            stop("First ncol - 1 entries not in {0, 1}.")
+      }
+
+      if(is.null(colnames(x))) {
+        ncx <- (ncol(x) - 1)
+        message("No column names: assigning gene names from LETTERS")
+        if(ncx > length(LETTERS))
+          stop("More genes than LETTERS; please give gene names",
+               " as you see fit.")
+        colnames(x) <- c(LETTERS[1:ncx], "Fitness")
+      }
+
+      if(!all(as.matrix(x[, -ncol(x)]) %in% c(0, 1) ))
+        stop("First ncol - 1 entries not in {0, 1}.")
     } else {
-        if(!inherits(x, "data.frame"))
-            stop("genotFitness: if two-column must be data frame")
-        ## Make sure no factors
-        if(is.factor(x[, 1])) {
-            warning("First column of genotype fitness is a factor. ",
-                    "Converting to character.")
-            x[, 1] <- as.character(x[, 1])
-            }
-        ## Make sure no numbers
-        if(any(is.numeric(x[, 1])))
-            stop(paste0("genotFitness: first column of data frame is numeric.",
-                        " Ambiguous and suggests possible error. If sure,",
-                        " enter that column as character"))
-        
-        omarker <- any(grepl(">", x[, 1], fixed = TRUE))
-        emarker <- any(grepl(",", x[, 1], fixed = TRUE))
-        nogoodepi <- any(grepl(":", x[, 1], fixed = TRUE))
-        ## if(omarker && emarker) stop("Specify only epistasis or order, not both.")
-        if(nogoodepi && emarker) stop("Specify the genotypes separated by a ',', not ':'.")
-        if(nogoodepi && !emarker) stop("Specify the genotypes separated by a ',', not ':'.")
-        ## if(nogoodepi && omarker) stop("If you want order, use '>' and if epistasis ','.")
-        ## if(!omarker && !emarker) stop("You specified neither epistasis nor order")
-        if(omarker) {
-            ## do something. To be completed
-            stop("This code not yet ready")
-            ## You can pass to allFitnessEffects genotype -> fitness mappings that
-            ## involve epistasis and order. But they must have different
-            ## genes. Otherwise, it is not manageable.
+      if(!inherits(x, "data.frame"))
+        stop("genotFitness: if two-column must be data frame")
+      ## Make sure no factors
+      if(is.factor(x[, 1])) {
+        warning("First column of genotype fitness is a factor. ",
+                "Converting to character.")
+        x[, 1] <- as.character(x[, 1])
+      }
+      ## Make sure no numbers
+      if(any(is.numeric(x[, 1])))
+        stop(paste0("genotFitness: first column of data frame is numeric.",
+                    " Ambiguous and suggests possible error. If sure,",
+                    " enter that column as character"))
+
+      omarker <- any(grepl(">", x[, 1], fixed = TRUE))
+      emarker <- any(grepl(",", x[, 1], fixed = TRUE))
+      nogoodepi <- any(grepl(":", x[, 1], fixed = TRUE))
+      ## if(omarker && emarker) stop("Specify only epistasis or order, not both.")
+      if(nogoodepi && emarker) stop("Specify the genotypes separated by a ',', not ':'.")
+      if(nogoodepi && !emarker) stop("Specify the genotypes separated by a ',', not ':'.")
+      ## if(nogoodepi && omarker) stop("If you want order, use '>' and if epistasis ','.")
+      ## if(!omarker && !emarker) stop("You specified neither epistasis nor order")
+      if(omarker) {
+        ## do something. To be completed
+        stop("This code not yet ready")
+        ## You can pass to allFitnessEffects genotype -> fitness mappings that
+        ## involve epistasis and order. But they must have different
+        ## genes. Otherwise, it is not manageable.
+      }
+      if( emarker || ( (!omarker) && (!emarker) && (!nogoodepi)) ) {
+        ## the second case above corresponds to passing just single letter genotypes
+        ## as there is not a single marker
+        x <- x[, c(1, 2), drop = FALSE]
+        if(!all(colnames(x) == c("Genotype", "Fitness"))) {
+          message("Column names of object not Genotype and Fitness.",
+                  " Renaming them assuming that is what you wanted")
+          colnames(x) <- c("Genotype", "Fitness")
         }
-        if( emarker || ( (!omarker) && (!emarker) && (!nogoodepi)) ) {
-            ## the second case above corresponds to passing just single letter genotypes
-            ## as there is not a single marker
-            x <- x[, c(1, 2), drop = FALSE]
-            if(!all(colnames(x) == c("Genotype", "Fitness"))) {
-                message("Column names of object not Genotype and Fitness.",
-                        " Renaming them assuming that is what you wanted")
-                colnames(x) <- c("Genotype", "Fitness")
-            }
-            if((!omarker) && (!emarker) && (!nogoodepi)) {
-                message("All single-gene genotypes as input to to_genotFitness_std")
-            }
-            ## Yes, we need to do this to  scale the fitness and put the "-"
-            x <- allGenotypes_to_matrix(x)
+        if((!omarker) && (!emarker) && (!nogoodepi)) {
+          message("All single-gene genotypes as input to to_genotFitness_std")
         }
+        ## Yes, we need to do this to  scale the fitness and put the "-"
+        x <- allGenotypes_to_matrix(x)
+      }
     }
     ## And, yes, scale all fitnesses by that of the WT
     whichroot <- which(rowSums(x[, -ncol(x), drop = FALSE]) == 0)
     if(length(whichroot) == 0) {
-        warning("No wildtype in the fitness landscape!!! Adding it with fitness 1.")
-        x <- rbind(c(rep(0, ncol(x) - 1), 1), x)
+      warning("No wildtype in the fitness landscape!!! Adding it with fitness 1.")
+      x <- rbind(c(rep(0, ncol(x) - 1), 1), x)
     } else if(x[whichroot, ncol(x)] != 1) {
-        warning("Fitness of wildtype != 1.",
-                " Dividing all fitnesses by fitness of wildtype.")
-        vwt <- x[whichroot, ncol(x)]
-        x[, ncol(x)] <- x[, ncol(x)]/vwt
+      warning("Fitness of wildtype != 1.",
+              " Dividing all fitnesses by fitness of wildtype.")
+      vwt <- x[whichroot, ncol(x)]
+      x[, ncol(x)] <- x[, ncol(x)]/vwt
     }
     if(any(is.na(x)))
-        stop("NAs in fitness matrix")
+      stop("NAs in fitness matrix")
     if(simplify) {
-        return(x[x[, ncol(x)] > min_filter_fitness, , drop = FALSE])
+      return(x[x[, ncol(x)] > min_filter_fitness, , drop = FALSE])
     } else {
-        return(x)
+      return(x)
     }
+  }
+
+  if (frequencyDependentFitness){
+
+    if(inherits(x, "matrix")) {
+      if(!is.numeric(x[-ncol(x)]))
+        stop("All columns except the last one must be numeric.")
+    } else if(inherits(x, "data.frame")) {
+      if(!all(unlist(lapply(x[-ncol(x)], is.numeric))))
+        stop("All columns except the last one must be numeric.")
+    }
+
+    if(!all(unlist(lapply(x[ncol(x)], is.character))))
+      stop("All elements in last column must be character.")
+
+    if(any(duplicated(colnames(x))))
+      stop("duplicated column names")
+
+    cnfl <- which(colnames(x)[-ncol(x)] == "")
+    if(length(cnfl)) {
+      freeletter <- setdiff(LETTERS, colnames(x))[1]
+      if(length(freeletter) == 0) stop("Renaiming failed")
+      warning("One column named ''. Renaming to ", freeletter)
+      colnames(x)[cnfl] <- freeletter
+    }
+
+    if(!is.null(colnames(x)) && sort_gene_names) {
+      ncx <- ncol(x)
+      cnx <- colnames(x)[-ncx]
+      ocnx <- gtools::mixedorder(cnx)
+      if(!(identical(cnx[ocnx], cnx))) {
+        message("Sorting gene column names alphabetically")
+        x <- cbind(x[, ocnx, drop = FALSE], Fitness = x[, (ncx)])
+      }
+    }
+
+    if(is.null(colnames(x))) {
+      ncx <- (ncol(x) - 1)
+      message("No column names: assigning gene names from LETTERS")
+      if(ncx > length(LETTERS))
+        stop("More genes than LETTERS. Not supported by now.")
+      colnames(x) <- c(LETTERS[1:ncx], "Fitness")
+    }
+
+    if(!all(as.matrix(x[, -ncol(x)]) %in% c(0, 1) ))
+      stop("First ncol - 1 entries not in {0, 1}.")
+
+    if(any(is.na(x)))
+      stop("NAs in fitness matrix")
+
+    locsLetters <- gregexpr("f\\(([aA-zZ]?,? ?)*\\)", x[, ncol(x)])
+    locsNumbers <- gregexpr("f\\(([0-9]?,? ?)*\\)", x[, ncol(x)])
+    genesVectorLetters <-
+      unique(unlist(strsplit(unlist(sapply(regmatches(x[, ncol(x)], locsLetters),
+                                                               function(x){sub(".*\\((.*)\\).*",
+                                                                               "\\1",
+                                                                               x)})),
+                                                 ", ")))
+    genesVectorNumbers <-
+      unique(unlist(strsplit(unlist(sapply(regmatches(x[, ncol(x)], locsNumbers),
+                                                               function(x){sub(".*\\((.*)\\).*"
+                                                                               ,"\\1",
+                                                                               x)})),
+                                                 ", ")))
+
+    if(all(genesVectorLetters %in% c(LETTERS,  letters, ""))) {
+      genotypesBy = "letters"
+    }else if(is.numeric(locsNumbers)) {
+      genotypesBy = "numbers"
+    }else{
+      stop("All genotypes must be letters or integers separated by ', '.")
+    }
+
+    if(genotypesBy == "letters") {
+      locs <- gregexpr("f\\(([aA-zZ],? ?)*\\)", x[, ncol(x)])
+      lettersGenesVector <-
+        sort(unlist(strsplit(gsub(".*\\((.*)\\).*",
+                                  "\\1",
+                                  unlist(regmatches(x[, ncol(x)], locs))),
+                             ", ")))
+      lastLetter <- tolower(lettersGenesVector[length(lettersGenesVector)])
+      n_max <- match(lastLetter, letters)
+
+      if(n_max > ncol(x) - 1)
+        stop("Gene's letters in fitness column must match with columns number")
+
+      fitnessColumn <- sapply(x[, ncol(x)], function(x) replaceWithNumbers(x))
+      x[, ncol(x)] <- fitnessColumn
+    }
+    return(x)
+  }
 }
 
 ## Deprecated after flfast
@@ -262,17 +390,17 @@ to_genotFitness_std <- function(x, simplify = TRUE,
 ## from_genotype_fitness <- function(x) {
 ##     ## Would break with output from allFitnessEffects and
 ##     ## output from allGenotypeAndMut
-    
+
 ##     ## For the very special and weird case of
 ##     ## a matrix but only a single gene so with a 0 and 1
 ##     ## No, this is a silly and meaningless case.
 ##     ## if( ( ncol(x) == 2 ) && (nrow(x) == 1) && (x[1, 1] == 1) ) {
-    
-##     ## } else  blabla: 
-    
+
+##     ## } else  blabla:
+
 ##     if(! (inherits(x, "matrix") || inherits(x, "data.frame")) )
 ##         stop("Input must inherit from matrix or data.frame.")
-    
+
 ##     ## if((ncol(x) > 2) && !(inherits(x, "matrix"))
 ##     ##     stop(paste0("Genotype fitness input either two-column data frame",
 ##     ##          " or a numeric matrix with > 2 columns."))
@@ -280,7 +408,7 @@ to_genotFitness_std <- function(x, simplify = TRUE,
 ##     ##     stop(paste0("It looks like you have a matrix for a single genotype",
 ##     ##                 " of a single gene. For this degenerate cases use",
 ##     ##                 " a data frame specification."))
-    
+
 ##     if(ncol(x) > 2) {
 ##         if(inherits(x, "matrix")) {
 ##             if(!is.numeric(x))
@@ -289,7 +417,7 @@ to_genotFitness_std <- function(x, simplify = TRUE,
 ##             if(!all(unlist(lapply(x, is.numeric))))
 ##                 stop("A genotype fitness matrix/data.frame must be numeric.")
 ##         }
-        
+
 ##         ## We are expecting here a matrix of 0/1 where columns are genes
 ##         ## except for the last column, that is Fitness
 ##         ## Of course, can ONLY work with epistastis, NOT order
@@ -304,7 +432,7 @@ to_genotFitness_std <- function(x, simplify = TRUE,
 ##             stop(paste0("genotFitness: first column of data frame is numeric.",
 ##                         " Ambiguous and suggests possible error. If sure,",
 ##                         " enter that column as character"))
-        
+
 ##         omarker <- any(grepl(">", x[, 1], fixed = TRUE))
 ##         emarker <- any(grepl(",", x[, 1], fixed = TRUE))
 ##         nogoodepi <- any(grepl(":", x[, 1], fixed = TRUE))
@@ -356,7 +484,7 @@ genot_fitness_to_epistasis <- function(x) {
     ## you use this is because you say "this is the mapping genotype ->
     ## fitness. Period." so we should not combine other terms (or other
     ## terms that involve these genes)
-    
+
     nr <- nrow(x)
     if(nr < (2^(ncol(x) - 1)))
         message("Number of genotypes less than 2^L.",
@@ -379,7 +507,7 @@ genot_fitness_to_epistasis <- function(x) {
                 "Dividing all fitnesses by fitness of wildtype.")
         f <- f/fwt
     }
-    
+
     if(is.null(colnames(x)) || any(grepl("^$", colnames(x))) ) {
         message("Setting/resetting gene names because one or more are missing.",
                 " If this is not what you want, pass a matrix",
@@ -403,10 +531,10 @@ genot_fitness_to_epistasis <- function(x) {
 
 
 
-allGenotypes_to_matrix <- function(x) { 
+allGenotypes_to_matrix <- function(x) {
     ## Makes no sense to allow passing order: the matrix would have
     ## repeated rows. A > B and B > A both have exactly A and B
-    
+
     ## Take output of evalAllGenotypes or identical data frame and return
     ## a matrix with 0/1 in a column for each gene and a final column of
     ## Fitness
@@ -460,7 +588,7 @@ Magellan_stats <- function(x, max_num_genotypes = 2000,
                            short = TRUE,
                            fl_statistics = "fl_statistics",
                            replace_missing = FALSE) { # nocov start
-    ## I always use 
+    ## I always use
     ## if(!is.null(x) && is.null(file))
     ##     stop("one of object or file name")
     ## if(is.null(file))
@@ -468,7 +596,7 @@ Magellan_stats <- function(x, max_num_genotypes = 2000,
     fnret <- tempfile()
     if(verbose)
         cat("\n Using input file", fn, " and output file ", fnret, "\n")
-    
+
     if(use_log) {
         logarg <- "-l"
     } else {
@@ -479,7 +607,7 @@ Magellan_stats <- function(x, max_num_genotypes = 2000,
     } else {
         shortarg <- NULL
     }
-    
+
     if(replace_missing) {
         zarg <- "-z"
     } else {
@@ -493,7 +621,7 @@ Magellan_stats <- function(x, max_num_genotypes = 2000,
                       stdout = NULL)
     if(short) {
         ## tmp <- as.vector(read.table(fnret, skip = 1, header = TRUE)[-1])
-        
+
         tmp <- as.vector(read.table(fnret, skip = 1, header = TRUE)[c(-1)])
         ## Make names more explicit, but check we have what we think we have
         ## New versions of Magellan produce different output apparently of variable length
@@ -538,14 +666,14 @@ Magellan_draw <- function(x, max_num_genotypes = 2000,
     fn_out <- paste0(fn, ".svg")
     if(verbose)
         cat("\n Using input file", fn, " and output file ", fn_out, "\n")
-       
+
     to_Magellan(x, fn, max_num_genotypes = max_num_genotypes)
     call_M <- system2(fl_draw, args = paste(fn, args), wait = FALSE)
     call_view <- system2(svg_open, args = fn_out, wait = FALSE,
                          stdout = ifelse(verbose, "", FALSE),
                          stderr = ifelse(verbose, "", FALSE))
-    
-    invisible() 
+
+    invisible()
 } # nocov end
 
 

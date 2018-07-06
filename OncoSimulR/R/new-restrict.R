@@ -37,7 +37,7 @@ check.gm <- function(gm) {
 
     ## Actually, that sucks. So we do not require it, but check for
     ## consistency.
-    
+
     if(any(gm == "Root") && (gm[1] != "Root") )
         stop("If Root is in the module table, it must be the first")
 
@@ -86,7 +86,7 @@ nice.vector.eo <- function(z, sep, rm.sign = FALSE) {
 gm.to.geneModuleL <- function(gm, one.to.one) {
     ## the table will be sorted by gene name
     gm <- check.gm(gm)
-   
+
     ## the named vector with the mapping into the long geneModule df
     geneMod <- as.data.frame(rbindlist(lapply(gm, gtm2)),
                              stringsAsFactors = TRUE) ## this stringsAsFactors is key
@@ -95,7 +95,7 @@ gm.to.geneModuleL <- function(gm, one.to.one) {
     geneMod <- geneMod[, -2]
     geneMod$Gene <- as.character(geneMod$Gene)
     ## geneMod$Module <- as.character(geneMod$Module) ## already a char
-    geneMod <- geneMod[c(1, order(geneMod$Gene[-1]) + 1), ] 
+    geneMod <- geneMod[c(1, order(geneMod$Gene[-1]) + 1), ]
     geneMod$GeneNumID <- 0:(nrow(geneMod) - 1)
 
     ## this assumes sorted! and they need not be
@@ -125,7 +125,7 @@ gm.to.geneModuleL <- function(gm, one.to.one) {
         stop("Are there identical gene names in different modules?")
     }
     rownames(geneMod) <- 1:nrow(geneMod)
-    geneMod   
+    geneMod
 }
 
 geneModuleNull <- function(namesM) {
@@ -181,14 +181,14 @@ to.long.rt <- function(rt, idm) {
     ##     rt$parent <- as.character(rt$parent)
     ## if(is.numeric(rt$child))
     ##     rt$child <- as.character(rt$child)
-   
-    
+
+
     if(!("Root" %in% rt$parent))
         stop("Root must be one parent node")
 
     ## rt$parent <- unlist(lapply(rt$parent, nice.string))
     ## rt$child <- unlist(lapply(rt$child, nice.string))
-   
+
     srt <- rt[order(rt$child), ]
 
     ## Not relevant if we allow non-numeric names
@@ -210,7 +210,7 @@ to.long.rt <- function(rt, idm) {
     ## idm is just a look up table for the id of the module
     ## idm <- unique(geneModule$ModuleNumID)
     ## names(idm) <- unique(geneModule$Module)
-    
+
     ## add integer IDs
     addIntID <- function(z, idm) {
         z$childNumID <- idm[z$child]
@@ -222,7 +222,7 @@ to.long.rt <- function(rt, idm) {
                        "Is a gene part of two different modules?",
                        "(That includes being by itself and part",
                        "of a module.)"))
-            
+
         }
         ## These checks could be somewhere else instead of here.
         if(length(unique(z$parentsNumID)) != length(z$parentsNumID))
@@ -231,7 +231,7 @@ to.long.rt <- function(rt, idm) {
             stop("No node can have the same parent multiple times")
         if(length(z$child) > 1)
             stop("Child nodes can have one, and only one, member")
-        
+
         ## sort the parents, always.
         o <- order(z$parentsNumID)
         z$parentsNumID <- z$parentsNumID[o]
@@ -239,7 +239,7 @@ to.long.rt <- function(rt, idm) {
         return(z)
     }
     long.rt <- lapply(long.rt, function(x) addIntID(x, idm = idm))
-   
+
     ## if(verbosity >= 4) {
     ##     message(paste("Number of drivers: ",
     ##                   length(unique(geneModule[, "Gene"]))))
@@ -309,7 +309,7 @@ to.long.epist.order <- function(epor, sep, rm.sign = FALSE) {
     ## if(is.vector(epor))
     ##     long <- Map(function(x, y) epist.order.element(x, y, sep, rm.sign),
     ##                    names(epor), epor)
-    ## else if(is.data.frame(epor)) 
+    ## else if(is.data.frame(epor))
     ##     long <- Map(function(x, y) epist.order.element(x, y, sep, rm.sign),
     ##                 as.character(epor$ids),
     ##                 epor$s)
@@ -400,7 +400,7 @@ getGeneIDNum <- function(geneModule, geneNoInt, fitnessLandscape_gene_id,
         stop(paste("For driver or initMutant you have passed genes",
                    "not in the fitness table."))
     }
-    
+
     indicesM <- as.vector(na.omit(match( drv, geneModule$Gene)))
     indicesI <- as.vector(na.omit(sort(match( drv, geneNoInt$Gene))))
     indicesF <- as.vector(na.omit(sort(match( drv, fitnessLandscape_gene_id$Gene))))
@@ -414,6 +414,20 @@ getGeneIDNum <- function(geneModule, geneNoInt, fitnessLandscape_gene_id,
     )
 }
 
+##New function
+fVariables <- function (g) {
+
+  combinationsList <- list()
+  for (i in 0:g) {
+    combinationsList <- append(combinationsList,
+                               combn(1:g, i, list, simplify = TRUE))
+  }
+  fsVector <- paste0(sapply(sapply(combinationsList,
+                                   function(x) paste0(x, collapse = ", ")),
+                            function(x) paste0("f(", x)), ")")
+
+  return (fsVector)
+}
 
 allFitnessORMutatorEffects <- function(rT = NULL,
                                        epistasis = NULL,
@@ -424,205 +438,206 @@ allFitnessORMutatorEffects <- function(rT = NULL,
                                        keepInput = TRUE,
                                        genotFitness = NULL,
                                        ## refFE = NULL,
+                                       frequencyDependentFitness = FALSE,
                                        calledBy = NULL) {
-    ## From allFitnessEffects. Generalized so we deal with Fitness
-    ## and mutator.
-    
-    ## restrictions: the usual rt
+  ## From allFitnessEffects. Generalized so we deal with Fitness
+  ## and mutator.
 
-    ## epistasis: as it says, with the ":"
+  ## restrictions: the usual rt
 
-    ## orderEffects: the ">"
-    
-    ## All of the above can be genes or can be modules (if you pass a
-    ## geneToModule)
+  ## epistasis: as it says, with the ":"
 
-    ## rest: rest of genes, with fitness
+  ## orderEffects: the ">"
+
+  ## All of the above can be genes or can be modules (if you pass a
+  ## geneToModule)
+
+  ## rest: rest of genes, with fitness
 
 
-    ## For epistasis and order effects we create the output object but
-    ## missing the numeric ids of genes. With rT we do it in one go, as we
-    ## already know the mapping of genes to numeric ids. We could do the
-    ## same in epistasis and order, but we would be splitting twice
-    ## (whereas for rT extracting the names is very simple).
+  ## For epistasis and order effects we create the output object but
+  ## missing the numeric ids of genes. With rT we do it in one go, as we
+  ## already know the mapping of genes to numeric ids. We could do the
+  ## same in epistasis and order, but we would be splitting twice
+  ## (whereas for rT extracting the names is very simple).
 
-    ## called appropriately?
-    if( !(calledBy %in% c("allFitnessEffects", "allMutatorEffects") ))
-        stop("How did you call this function?. Bug.")
-    
-    if(calledBy == "allMutatorEffects") {
-        ## very paranoid check
-        if( !is.null(rT) || !is.null(orderEffects) ||
-            !is.null(drvNames) || !is.null(genotFitness))
-            stop("allMutatorEffects called with forbidden arguments.",
-                 "Is this an attempt to subvert the function?")
-    }
-    
+  ## called appropriately?
+  if( !(calledBy %in% c("allFitnessEffects", "allMutatorEffects") ))
+    stop("How did you call this function?. Bug.")
+
+  if(calledBy == "allMutatorEffects") {
+    ## very paranoid check
+    if( !is.null(rT) || !is.null(orderEffects) ||
+        !is.null(drvNames) || !is.null(genotFitness))
+      stop("allMutatorEffects called with forbidden arguments.",
+           "Is this an attempt to subvert the function?")
+  }
+  if(!frequencyDependentFitness) {
     rtNames <- NULL
     epiNames <- NULL
     orNames <- NULL
     if(!is.null(rT)) {
-        ## This is really ugly, but to prevent the stringsAsFactors I need it here:
-        rT$parent <- as.character(rT$parent)
-        rT$child <- as.character(rT$child)
-        rT$typeDep <- as.character(rT$typeDep)
-        rtNames <- unique(c(rT$parent, rT$child))
+      ## This is really ugly, but to prevent the stringsAsFactors I need it here:
+      rT$parent <- as.character(rT$parent)
+      rT$child <- as.character(rT$child)
+      rT$typeDep <- as.character(rT$typeDep)
+      rtNames <- unique(c(rT$parent, rT$child))
     }
     if(!is.null(epistasis)) {
-        long.epistasis <- to.long.epist.order(epistasis, ":")
-        ## epiNames <- unique(unlist(lapply(long.epistasis, function(x) x$ids)))
-        ## deal with the possible negative signs
-        epiNames <- setdiff(unique(
-            unlist(lapply(long.epistasis,
-                          function(x) lapply(x$ids,
-                                             function(z) strsplit(z, "^-"))))),
-                            "")
+      long.epistasis <- to.long.epist.order(epistasis, ":")
+      ## epiNames <- unique(unlist(lapply(long.epistasis, function(x) x$ids)))
+      ## deal with the possible negative signs
+      epiNames <- setdiff(unique(
+        unlist(lapply(long.epistasis,
+                      function(x) lapply(x$ids,
+                                         function(z) strsplit(z, "^-"))))),
+        "")
     } else {
-        long.epistasis <- list()
+      long.epistasis <- list()
     }
     if(!is.null(orderEffects)) {
-        long.orderEffects <- to.long.epist.order(orderEffects, ">")
-        orNames <- unique(unlist(lapply(long.orderEffects, function(x) x$ids)))
+      long.orderEffects <- to.long.epist.order(orderEffects, ">")
+      orNames <- unique(unlist(lapply(long.orderEffects, function(x) x$ids)))
     } else {
-        long.orderEffects <- list()
+      long.orderEffects <- list()
     }
     allModuleNames <- unique(c(rtNames, epiNames, orNames))
     if(is.null(geneToModule)) {
-        gMOneToOne <- TRUE
-        geneToModule <- geneModuleNull(allModuleNames)
+      gMOneToOne <- TRUE
+      geneToModule <- geneModuleNull(allModuleNames)
     } else {
-        gMOneToOne <- FALSE
-        if(any(is.na(match(setdiff(names(geneToModule), "Root"), allModuleNames))))
-            stop(paste("Some values in geneToModule not present in any of",
-                       " rT, epistasis, or order effects"))
-        if(any(is.na(match(allModuleNames, names(geneToModule)))))
-            stop(paste("Some values in rT, epistasis, ",
-                       "or order effects not in geneToModule"))
+      gMOneToOne <- FALSE
+      if(any(is.na(match(setdiff(names(geneToModule), "Root"), allModuleNames))))
+        stop(paste("Some values in geneToModule not present in any of",
+                   " rT, epistasis, or order effects"))
+      if(any(is.na(match(allModuleNames, names(geneToModule)))))
+        stop(paste("Some values in rT, epistasis, ",
+                   "or order effects not in geneToModule"))
     }
     geneModule <- gm.to.geneModuleL(geneToModule, one.to.one = gMOneToOne)
-    
+
     idm <- unique(geneModule$ModuleNumID)
     names(idm) <- unique(geneModule$Module)
 
     if(!is.null(rT)) {
-        checkRT(rT)
-        long.rt <- to.long.rt(rT, idm)
+      checkRT(rT)
+      long.rt <- to.long.rt(rT, idm)
     } else {
-        long.rt <- list() ## yes, we want an object of length 0
+      long.rt <- list() ## yes, we want an object of length 0
     }
 
     ## Append the numeric ids to epistasis and order
     if(!is.null(epistasis)) {
-        long.epistasis <- lapply(long.epistasis,
-                                 function(x)
-                                     addIntID.epist.order(x, idm,
-                                                          sort = TRUE,
-                                                          sign = TRUE))
+      long.epistasis <- lapply(long.epistasis,
+                               function(x)
+                                 addIntID.epist.order(x, idm,
+                                                      sort = TRUE,
+                                                      sign = TRUE))
     }
     if(!is.null(orderEffects)) {
-        long.orderEffects <- lapply(long.orderEffects,
-                                    function(x)
-                                        addIntID.epist.order(x, idm,
-                                                             sort = FALSE,
-                                                             sign = FALSE))
+      long.orderEffects <- lapply(long.orderEffects,
+                                  function(x)
+                                    addIntID.epist.order(x, idm,
+                                                         sort = FALSE,
+                                                         sign = FALSE))
     }
-    
+
     if(!is.null(noIntGenes)) {
-        if(inherits(noIntGenes, "character")) {
-            wm <- paste("noIntGenes is a character vector.",
-                        "This is probably not what you want, and will",
-                        "likely result in an error downstream.",
-                        "You can get messages like",
-                        " 'not compatible with requested type', and others.",
-                        "We are stopping.")
-            stop(wm)
-        }
-            
-        mg <- max(geneModule[, "GeneNumID"])
-        gnum <- seq_along(noIntGenes) + mg
-        if(!is.null(names(noIntGenes))) {
-            ng <- names(noIntGenes)
-            if( grepl(",", ng, fixed = TRUE) || grepl(">", ng, fixed = TRUE)
-                || grepl(":", ng, fixed = TRUE))
-                stop("The name of some noIntGenes contain a ',' or a '>' or a ':'")
-            if(any(ng %in% geneModule[, "Gene"] ))
-                stop("A gene in noIntGenes also present in the other terms")
-            if(any(duplicated(ng)))
-                stop("Duplicated gene names in geneNoInt")
-            if(any(is.na(ng)))
-                stop("In noIntGenes some genes have names, some don't.",
-                     " Name all of them, or name none of them.")
-        } else {
-            ng <- gnum
-        }
-        geneNoInt <- data.frame(Gene = as.character(ng),
-                                GeneNumID = gnum,
-                                s = noIntGenes,
-                                stringsAsFactors = FALSE)
+      if(inherits(noIntGenes, "character")) {
+        wm <- paste("noIntGenes is a character vector.",
+                    "This is probably not what you want, and will",
+                    "likely result in an error downstream.",
+                    "You can get messages like",
+                    " 'not compatible with requested type', and others.",
+                    "We are stopping.")
+        stop(wm)
+      }
+
+      mg <- max(geneModule[, "GeneNumID"])
+      gnum <- seq_along(noIntGenes) + mg
+      if(!is.null(names(noIntGenes))) {
+        ng <- names(noIntGenes)
+        if( grepl(",", ng, fixed = TRUE) || grepl(">", ng, fixed = TRUE)
+            || grepl(":", ng, fixed = TRUE))
+          stop("The name of some noIntGenes contain a ',' or a '>' or a ':'")
+        if(any(ng %in% geneModule[, "Gene"] ))
+          stop("A gene in noIntGenes also present in the other terms")
+        if(any(duplicated(ng)))
+          stop("Duplicated gene names in geneNoInt")
+        if(any(is.na(ng)))
+          stop("In noIntGenes some genes have names, some don't.",
+               " Name all of them, or name none of them.")
+      } else {
+        ng <- gnum
+      }
+      geneNoInt <- data.frame(Gene = as.character(ng),
+                              GeneNumID = gnum,
+                              s = noIntGenes,
+                              stringsAsFactors = FALSE)
     } else {
-        geneNoInt <- data.frame()
+      geneNoInt <- data.frame()
     }
-    
+
     if(is.null(genotFitness)) {
-        genotFitness <- matrix(NA, nrow = 0, ncol = 1)
-        fitnessLandscape_df <- data.frame()
-        fitnessLandscape_gene_id <- data.frame()
+      genotFitness <- matrix(NA, nrow = 0, ncol = 1)
+      fitnessLandscape_df <- data.frame()
+      fitnessLandscape_gene_id <- data.frame()
     } else {
-        ## Yes, I am duplicating stuff for now.
-        ## This makes life simpler in C++:
-        ## In the map, the key is the genotype name, as
-        ## cnn <- colnames(genotFitness)[-ncol(genotFitness)]
-        cnn <- 1:(ncol(genotFitness) - 1)
-        gfn <- apply(genotFitness[, -ncol(genotFitness), drop = FALSE], 1,
-                     function(x) paste(cnn[as.logical(x)],
-                                       collapse = ", "))
-        ## rownames(genotFitness) <- gfn
-        fitnessLandscape_df <-
-            data.frame(Genotype = gfn,
-                       Fitness = genotFitness[, ncol(genotFitness)],
-                       stringsAsFactors = FALSE)
-        fitnessLandscape_gene_id <- data.frame(
-            Gene = colnames(genotFitness)[-ncol(genotFitness)],
-            GeneNumID = cnn,
-            stringsAsFactors = FALSE)
-        
+      ## Yes, I am duplicating stuff for now.
+      ## This makes life simpler in C++:
+      ## In the map, the key is the genotype name, as
+      ## cnn <- colnames(genotFitness)[-ncol(genotFitness)]
+      cnn <- 1:(ncol(genotFitness) - 1)
+      gfn <- apply(genotFitness[, -ncol(genotFitness), drop = FALSE], 1,
+                   function(x) paste(cnn[as.logical(x)],
+                                     collapse = ", "))
+      ## rownames(genotFitness) <- gfn
+      fitnessLandscape_df <-
+        data.frame(Genotype = gfn,
+                   Fitness = genotFitness[, ncol(genotFitness)],
+                   stringsAsFactors = FALSE)
+      fitnessLandscape_gene_id <- data.frame(
+        Gene = colnames(genotFitness)[-ncol(genotFitness)],
+        GeneNumID = cnn,
+        stringsAsFactors = FALSE)
+
     }
-    
+
     if( (length(long.rt) + length(long.epistasis) + length(long.orderEffects) +
-             nrow(geneNoInt) + nrow(genotFitness)) == 0)
-        stop("You have specified nothing!")
+         nrow(geneNoInt) + nrow(genotFitness)) == 0)
+      stop("You have specified nothing!")
 
     if(calledBy == "allFitnessEffects") {
-        if((length(long.rt) + length(long.epistasis) + length(long.orderEffects)) > 1) {
-            graphE <- fitnessEffectsToIgraph(rT, epistasis, orderEffects)
-        } else {
-            graphE <- NULL
-        }
-    } else {
+      if((length(long.rt) + length(long.epistasis) + length(long.orderEffects)) > 1) {
+        graphE <- fitnessEffectsToIgraph(rT, epistasis, orderEffects)
+      } else {
         graphE <- NULL
+      }
+    } else {
+      graphE <- NULL
     }
     if(!is.null(drvNames)) {
-        drv <- unique(getGeneIDNum(geneModule, geneNoInt, fitnessLandscape_gene_id,
-                                   drvNames))
-        ## drivers should never be in the geneNoInt; Why!!!???
-        ## Catch the problem. This is an overkill,
-        ## so since we catch the issue, we could leave the geneNoInt. But
-        ## that should not be there in this call.
-        ## if(any(drvNames %in% geneNoInt$Gene)) {
-        ##     stop(paste("At least one gene in drvNames is a geneNoInt gene.",
-        ##                "That is not allowed.",
-        ##                "If that gene is a driver, pass it as gene in the epistasis",
-        ##                "component."))
-        ## }
-        ## drv <- getGeneIDNum(geneModule, NULL, drvNames)
+      drv <- unique(getGeneIDNum(geneModule, geneNoInt, fitnessLandscape_gene_id,
+                                 drvNames))
+      ## drivers should never be in the geneNoInt; Why!!!???
+      ## Catch the problem. This is an overkill,
+      ## so since we catch the issue, we could leave the geneNoInt. But
+      ## that should not be there in this call.
+      ## if(any(drvNames %in% geneNoInt$Gene)) {
+      ##     stop(paste("At least one gene in drvNames is a geneNoInt gene.",
+      ##                "That is not allowed.",
+      ##                "If that gene is a driver, pass it as gene in the epistasis",
+      ##                "component."))
+      ## }
+      ## drv <- getGeneIDNum(geneModule, NULL, drvNames)
     } else {
-        ## we used to have this default
-        ## drv <- geneModule$GeneNumID[-1]
-        drv <- vector(mode = "integer", length = 0L)
+      ## we used to have this default
+      ## drv <- geneModule$GeneNumID[-1]
+      drv <- vector(mode = "integer", length = 0L)
     }
-  
+
     if(!keepInput) {
-        rT <- epistasis <- orderEffects <- noIntGenes <- NULL
+      rT <- epistasis <- orderEffects <- noIntGenes <- NULL
     }
 
     out <- list(long.rt = long.rt,
@@ -640,14 +655,62 @@ allFitnessORMutatorEffects <- function(rT = NULL,
                 noIntGenes = noIntGenes,
                 fitnessLandscape = genotFitness,
                 fitnessLandscape_df = fitnessLandscape_df,
-                fitnessLandscape_gene_id = fitnessLandscape_gene_id
-                )
+                fitnessLandscape_gene_id = fitnessLandscape_gene_id,
+                fitnessLandscapeVariables = NULL
+    )
     if(calledBy == "allFitnessEffects") {
-        class(out) <- c("fitnessEffects")
+      class(out) <- c("fitnessEffects")
     } else if(calledBy == "allMutatorEffects") {
-        class(out) <- c("mutatorEffects")
+      class(out) <- c("mutatorEffects")
     }
-    return(out)
+  }
+
+  if(frequencyDependentFitness){
+
+    if(is.null(genotFitness)) {
+      genotFitness <- matrix(NA, nrow = 0, ncol = 1)
+      fitnessLandscape_df <- data.frame()
+      fitnessLandscape_gene_id <- data.frame()
+    } else {
+      cnn <- 1:(ncol(genotFitness) - 1)
+      gfn <- apply(genotFitness[, -ncol(genotFitness), drop = FALSE], 1,
+                   function(x) paste(cnn[as.logical(x)],
+                                     collapse = ", "))
+      ## rownames(genotFitness) <- gfn
+      fitnessLandscape_df <-
+        data.frame(Genotype = gfn,
+                   Fitness = genotFitness[, ncol(genotFitness)],
+                   stringsAsFactors = FALSE)
+
+      fitnessLandscape_gene_id <- data.frame(
+        Gene = colnames(genotFitness)[-ncol(genotFitness)],
+        GeneNumID = cnn,
+        stringsAsFactors = FALSE)
+
+      fitnessLandscapeVariables = fVariables(ncol(genotFitness) - 1)
+
+    }
+    out <- list(long.rt = NULL,
+                long.epistasis = NULL,
+                long.orderEffects = NULL,
+                long.geneNoInt = NULL,
+                geneModule = NULL,
+                gMOneToOne = NULL,
+                geneToModule = NULL,
+                graph = NULL,
+                drv = NULL,
+                rT = NULL,
+                epistasis = NULL,
+                orderEffects = NULL,
+                noIntGenes = NULL,
+                fitnessLandscape = genotFitness,
+                fitnessLandscape_df = fitnessLandscape_df,
+                fitnessLandscape_gene_id = fitnessLandscape_gene_id,
+                fitnessLandscapeVariables = fitnessLandscapeVariables)
+
+    class(out) <- c("fitnessEffects")
+  }
+  return(out)
 }
 
 ## Former version, with fitness landscape
@@ -662,13 +725,13 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##                                        calledBy = NULL) {
 ##     ## From allFitnessEffects. Generalized so we deal with Fitness
 ##     ## and mutator.
-    
+
 ##     ## restrictions: the usual rt
 
 ##     ## epistasis: as it says, with the ":"
 
 ##     ## orderEffects: the ">"
-    
+
 ##     ## All of the above can be genes or can be modules (if you pass a
 ##     ## geneToModule)
 
@@ -684,14 +747,14 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##     ## called appropriately?
 ##     if( !(calledBy %in% c("allFitnessEffects", "allMutatorEffects") ))
 ##         stop("How did you call this function?. Bug.")
-    
+
 ##     if(calledBy == "allMutatorEffects") {
 ##         ## very paranoid check
 ##         if( !is.null(rT) || !is.null(orderEffects) || !is.null(drvNames))
 ##             stop("allMutatorEffects called with forbidden arguments.",
 ##                  "Is this an attempt to subvert the function?")
 ##     }
-    
+
 ##     rtNames <- NULL
 ##     epiNames <- NULL
 ##     orNames <- NULL
@@ -734,7 +797,7 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##                        "or order effects not in geneToModule"))
 ##     }
 ##     geneModule <- gm.to.geneModuleL(geneToModule, one.to.one = gMOneToOne)
-    
+
 ##     idm <- unique(geneModule$ModuleNumID)
 ##     names(idm) <- unique(geneModule$Module)
 
@@ -760,7 +823,7 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##                                                              sort = FALSE,
 ##                                                              sign = FALSE))
 ##     }
-    
+
 ##     if(!is.null(noIntGenes)) {
 ##         if(inherits(noIntGenes, "character")) {
 ##             wm <- paste("noIntGenes is a character vector.",
@@ -771,7 +834,7 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##                         "We are stopping.")
 ##             stop(wm)
 ##         }
-            
+
 ##         mg <- max(geneModule[, "GeneNumID"])
 ##         gnum <- seq_along(noIntGenes) + mg
 ##         if(!is.null(names(noIntGenes))) {
@@ -828,7 +891,7 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##         ## drv <- geneModule$GeneNumID[-1]
 ##         drv <- vector(mode = "integer", length = 0L)
 ##     }
-    
+
 ##     if(!keepInput) {
 ##         rT <- epistasis <- orderEffects <- noIntGenes <- NULL
 ##     }
@@ -844,7 +907,7 @@ allFitnessORMutatorEffects <- function(rT = NULL,
 ##                 rT = rT,
 ##                 epistasis = epistasis,
 ##                 orderEffects = orderEffects,
-##                 noIntGenes = noIntGenes                
+##                 noIntGenes = noIntGenes
 ##                 )
 ##     if(calledBy == "allFitnessEffects") {
 ##         class(out) <- c("fitnessEffects")
@@ -862,33 +925,57 @@ allFitnessEffects <- function(rT = NULL,
                               geneToModule = NULL,
                               drvNames = NULL,
                               genotFitness = NULL,
-                              keepInput = TRUE) {
+                              keepInput = TRUE,
+                              frequencyDependentFitness = FALSE) {
 
+  if(!frequencyDependentFitness){
     if(!is.null(genotFitness)) {
-        if(!is.null(rT) || !is.null(epistasis) ||
-           !is.null(orderEffects) || !is.null(noIntGenes) ||
-           !is.null(geneToModule)) {
-            stop("You have a non-null genotFitness.",
-                 " If you pass the complete genotype to fitness mapping",
-                 " you cannot pass any of rT, epistasis, orderEffects",
-                 " noIntGenes or geneToModule.")
-        }
+      if(!is.null(rT) || !is.null(epistasis) ||
+         !is.null(orderEffects) || !is.null(noIntGenes) ||
+         !is.null(geneToModule)) {
+        stop("You have a non-null genotFitness.",
+             " If you pass the complete genotype to fitness mapping",
+             " you cannot pass any of rT, epistasis, orderEffects",
+             " noIntGenes or geneToModule.")
+      }
 
-        genotFitness_std <- to_genotFitness_std(genotFitness, simplify = TRUE)
-        ## epistasis <- from_genotype_fitness(genotFitness)
+      genotFitness_std <- to_genotFitness_std(genotFitness,
+                                              frequencyDependentFitness = FALSE,
+                                              simplify = TRUE)
+      ## epistasis <- from_genotype_fitness(genotFitness)
     } else {
-        genotFitness_std <- NULL
+      genotFitness_std <- NULL
     }
     allFitnessORMutatorEffects(
-        rT = rT,
-        epistasis = epistasis,
-        orderEffects = orderEffects,
-        noIntGenes = noIntGenes,
-        geneToModule = geneToModule,
-        drvNames = drvNames,
-        keepInput = keepInput,
-        genotFitness = genotFitness_std,
-        calledBy = "allFitnessEffects")
+      rT = rT,
+      epistasis = epistasis,
+      orderEffects = orderEffects,
+      noIntGenes = noIntGenes,
+      geneToModule = geneToModule,
+      drvNames = drvNames,
+      keepInput = keepInput,
+      genotFitness = genotFitness_std,
+      frequencyDependentFitness = FALSE,
+      calledBy = "allFitnessEffects")
+  }
+  if(frequencyDependentFitness){
+    if(is.null(genotFitness)) {
+      stop("You have a null genotFitness.")
+    } else {
+      genotFitness_std <- to_genotFitness_std(genotFitness,
+                                              frequencyDependentFitness = TRUE)
+      allFitnessORMutatorEffects(genotFitness = genotFitness_std,
+                                 rT = NULL,
+                                 epistasis = NULL,
+                                 orderEffects = NULL,
+                                 noIntGenes = NULL,
+                                 geneToModule = NULL,
+                                 drvNames = NULL,
+                                 keepInput = NULL,
+                                 frequencyDependentFitness = TRUE,
+                                 calledBy = "allFitnessEffects")
+    }
+  }
 }
 
 ## Former version
@@ -935,7 +1022,7 @@ allFitnessEffects <- function(rT = NULL,
 ##     ## epistasis: as it says, with the ":"
 
 ##     ## orderEffects: the ">"
-    
+
 ##     ## All of the above can be genes or can be modules (if you pass a
 ##     ## geneToModule)
 
@@ -948,7 +1035,7 @@ allFitnessEffects <- function(rT = NULL,
 ##     ## same in epistasis and order, but we would be splitting twice
 ##     ## (whereas for rT extracting the names is very simple).
 
-    
+
 ##     rtNames <- NULL
 ##     epiNames <- NULL
 ##     orNames <- NULL
@@ -968,7 +1055,7 @@ allFitnessEffects <- function(rT = NULL,
 ##                           function(x) lapply(x$ids,
 ##                                              function(z) strsplit(z, "^-"))))),
 ##                             "")
-        
+
 ##     } else {
 ##         long.epistasis <- list()
 ##     }
@@ -1018,7 +1105,7 @@ allFitnessEffects <- function(rT = NULL,
 ##                                                              sort = FALSE,
 ##                                                              sign = FALSE))
 ##     }
-    
+
 ##     if(!is.null(noIntGenes)) {
 ##         mg <- max(geneModule[, "GeneNumID"])
 ##         gnum <- seq_along(noIntGenes) + mg
@@ -1066,7 +1153,7 @@ allFitnessEffects <- function(rT = NULL,
 ##                 rT = rT,
 ##                 epistasis = epistasis,
 ##                 orderEffects = orderEffects,
-##                 noIntGenes = noIntGenes                
+##                 noIntGenes = noIntGenes
 ##                 )
 ##     class(out) <- c("fitnessEffects")
 ##     return(out)
@@ -1077,7 +1164,7 @@ allFitnessEffects <- function(rT = NULL,
 ## rtAndGeneModule <- function(mdeps, gM = NULL) {
 ##     ## To show a table of restrictions when there are modules. Do not use
 ##     ## for anything else. Maybe as intermediate to plotting.
-    
+
 ##     ## Specify restriction table of modules and a mapping of modules to
 ##     ## genes. gM is a named vector; names are modules, values are elements
 ##     ## of each module.
@@ -1098,7 +1185,7 @@ allFitnessEffects <- function(rT = NULL,
 ##             stop("Some values in child not from a known module")
 ##         if(any(is.na(match(names(gM), c(mdeps[, 1], mdeps[, 2])))))
 ##             stop("Some values in module in neither parent or child")
-        
+
 ##         parent <- gM[mdeps[, 1]]
 ##         child <- gM[mdeps[, 2]]
 ##         df <- data.frame(parent = parent,
@@ -1160,7 +1247,7 @@ evalGenotypeORMut <- function(genotype,
         warning("Bozic model passing a fitness landscape will not work",
                     " for now.")
     }
-    
+
     if(echo)
         cat(paste("Genotype: ", genotype))
     if(!is.integer(genotype)) {
@@ -1195,7 +1282,7 @@ evalGenotypeORMut <- function(genotype,
                         prodNeg = prodNeg,
                         calledBy_ = calledBy_)
 
-    
+
     if(echo) {
         if(calledBy_ == "evalGenotype") {
             if(!prodNeg)
@@ -1205,8 +1292,8 @@ evalGenotypeORMut <- function(genotype,
         } else if(calledBy_ == "evalGenotypeMut") {
             cat(" Mutation rate product :", ff, "\n")
         }
-        
-    } 
+
+    }
     return(ff)
 }
 
@@ -1234,7 +1321,7 @@ evalGenotypeFitAndMut <- function(genotype,
                                   verbose = FALSE,
                                   echo = FALSE,
                                   model = "") {
-    
+
     ## Must deal with objects from previous, pre flfast, modifications
     if(!exists("fitnessLandscape_gene_id", where = fitnessEffects)) {
         fitnessEffects$fitnessLandscape_df <- data.frame()
@@ -1291,7 +1378,7 @@ evalGenotypeFitAndMut <- function(genotype,
 ##     ## genotype can be a vector of integers, that are the exact same in
 ##     ## the table of fitnessEffects or a vector of strings, or a vector (a
 ##     ## string) with genes separated by "," or ">"
-    
+
 ##     if(echo)
 ##         cat(paste("Genotype: ", genotype))
 ##     if(!is.integer(genotype)) {
@@ -1348,7 +1435,7 @@ evalAllGenotypesORMut <- function(fmEffects,
 ##                             minimal = FALSE) {
     if( !(calledBy_ %in% c("evalGenotype", "evalGenotypeMut") ))
         stop("How did you call this function?. Bug.")
-    
+
     if( (calledBy_ == "evalGenotype" ) &&
         (!inherits(fmEffects, "fitnessEffects")))
         stop("You are trying to get the fitness of a mutator specification. ",
@@ -1358,8 +1445,8 @@ evalAllGenotypesORMut <- function(fmEffects,
         stop("You are trying to get the mutator effects of a fitness specification. ",
              "You did not pass an object of class mutatorEffects.")
 
-    
-    
+
+
     ## if(!minimal)
     allg <- generateAllGenotypes(fitnessEffects = fmEffects,
                                  order = order, max = max)
@@ -1388,7 +1475,7 @@ evalAllGenotypesORMut <- function(fmEffects,
     ## } else {
     ##     f1 <- function(n) {
     ##         lapply(seq.int(n), function(x) combinations(n = n, r = x, v = vid))}
-        
+
     ## }
     ## genotNums <- f1(nn)
     ## list.of.vectors <- function(y) {
@@ -1425,11 +1512,11 @@ evalAllGenotypesORMut <- function(fmEffects,
     ## generates warnings that are not needed. And by decree (even in the
     ## C++) this thing has a fitness of 1, a mutator effect of 1 since
     ## there are no terms.
-    
+
     if(addwt)
         df <- rbind(data.frame(Genotype = "WT", Fitness = 1,
                                stringsAsFactors = FALSE), df)
-    if(calledBy_ == "evalGenotype") { 
+    if(calledBy_ == "evalGenotype") {
         if(prodNeg)
             colnames(df)[match("Fitness", colnames(df))] <- "Death_rate"
         class(df) <- c("evalAllGenotypes", class(df))
@@ -1470,11 +1557,11 @@ generateAllGenotypes <- function(fitnessEffects, order = TRUE, max = 256) {
                                        function(x) choose(n, x) * factorial(x)))}
     else
         tot <- function(n) {2^n}
-    
+
     nn <- nrow(fitnessEffects$geneModule) -1  +
         nrow(fitnessEffects$long.geneNoInt) +
         nrow(fitnessEffects$fitnessLandscape_gene_id)
-    
+
     tnn <- tot(nn)
     if(tnn > max) {
         m <- paste("There are", tnn, "genotypes.")
@@ -1491,7 +1578,7 @@ generateAllGenotypes <- function(fitnessEffects, order = TRUE, max = 256) {
     } else {
         f1 <- function(n) {
             lapply(seq.int(n), function(x) combinations(n = n, r = x, v = vid))}
-        
+
     }
     genotNums <- f1(nn)
     list.of.vectors <- function(y) {
@@ -1503,7 +1590,7 @@ generateAllGenotypes <- function(fitnessEffects, order = TRUE, max = 256) {
     names <- c(fitnessEffects$geneModule$Gene[-1],
                fitnessEffects$long.geneNoInt$Gene,
                fitnessEffects$fitnessLandscape_gene_id$Gene)
-    
+
     genotNames <- unlist(lapply(lapply(genotNums, function(x) names[x]),
                                 function(z)
                                     paste(z,
@@ -1527,7 +1614,7 @@ evalAllGenotypesFitAndMut <- function(fitnessEffects, mutatorEffects,
     ## else
         ## allg <- generateAllGenotypes_minimal(fitnessEffects = fitnessEffects,
         ##                                      max = max)
-    
+
     if(model %in% c("Bozic", "bozic1", "bozic2") ) {
         prodNeg <- TRUE
     } else {
@@ -1544,8 +1631,8 @@ evalAllGenotypesFitAndMut <- function(fitnessEffects, mutatorEffects,
         (nrow(fitnessEffects$fitnessLandscape_df) > 0)) {
         warning("Bozic model passing a fitness landscape will not work",
                     " for now.")
-    } 
-    
+    }
+
     full2mutator_ <- matchGeneIDs(mutatorEffects,
                                   fitnessEffects)$Reduced
     allf <- t(vapply(allg$genotNums,
@@ -1578,7 +1665,7 @@ evalAllGenotypesFitAndMut <- function(fitnessEffects, mutatorEffects,
 ## evalAllGenotypes <- function(fitnessEffects, order = TRUE, max = 256,
 ##                              addwt = FALSE,
 ##                              model = "") {
-    
+
 ##     if(order)
 ##         tot <- function(n) {sum(sapply(seq.int(n),
 ##                                        function(x) choose(n, x) * factorial(x)))}
@@ -1599,7 +1686,7 @@ evalAllGenotypesFitAndMut <- function(fitnessEffects, mutatorEffects,
 ##     } else {
 ##         f1 <- function(n) {
 ##             lapply(seq.int(n), function(x) combinations(n = n, r = x))}
-        
+
 ##     }
 ##     genotNums <- f1(nn)
 ##     list.of.vectors <- function(y) {
@@ -1638,7 +1725,7 @@ evalAllGenotypesFitAndMut <- function(fitnessEffects, mutatorEffects,
 fitnessEffectsToIgraph <- function(rT, epistasis, orderEffects) {
 
     df0 <- df1 <- df2 <- data.frame()
-             
+
     if(!is.null(rT)) {
         df0 <- rT[, c("parent", "child", "typeDep")]
     }
@@ -1651,9 +1738,9 @@ fitnessEffectsToIgraph <- function(rT, epistasis, orderEffects) {
     df <- rbind(df0, df1, df2)
     ## for special case of simple epi effects
     if(nrow(df) == 0) return(NULL)
-    
+
     g1 <- graph.data.frame(df)
-    
+
     E(g1)$color <- "black"
     E(g1)$color[E(g1)$typeDep == "SM"] <- "blue"
     E(g1)$color[E(g1)$typeDep == "XMPN"] <- "red"
@@ -1729,7 +1816,7 @@ plot.fitnessEffects <- function(x, type = "graphNEL",
             plot(g1, edgeAttrs = list(arrowsize = a1, lty = s1, lwd = lwd,
                          color = c1), attrs=list(node=list(shape = "rectangle")),
                  nodeAttrs = nAttrs)
-            
+
         } else {
             plot(g1, edgeAttrs = list(arrowsize = a1, lty = s1, lwd = lwd,
                          color = c1),
@@ -1748,8 +1835,8 @@ plot.fitnessEffects <- function(x, type = "graphNEL",
 
 
 
-nr_oncoSimul.internal <- function(rFE, 
-                                  birth, 
+nr_oncoSimul.internal <- function(rFE,
+                                  birth,
                                   death,
                                   mu,
                                   initSize,
@@ -1784,7 +1871,7 @@ nr_oncoSimul.internal <- function(rFE,
                                   ) {
 
     default_min_successive_fixation <- 50 ## yes, set at this for now
-    
+
     if(!inherits(rFE, "fitnessEffects"))
         stop(paste("rFE must be an object of class fitnessEffects",
                    "as created, for instance, with function",
@@ -1796,7 +1883,7 @@ nr_oncoSimul.internal <- function(rFE,
              "you can enter a second gene (locus)",
              "with fitness effect of zero.")
     }
-    
+
     if( (length(mu) == 1) && !(is.null(names(mu)))) {
         stop("A length 1 mutation, but named. ",
              "This is ambiguous. ",
@@ -1813,7 +1900,7 @@ nr_oncoSimul.internal <- function(rFE,
         rFE$fitnessLandscape_df <- data.frame()
         rFE$fitnessLandscape_gene_id <- data.frame()
     }
-    
+
     namedGenes <- allNamedGenes(rFE)
 
     if( length(mu) > 1) {
@@ -1856,7 +1943,7 @@ nr_oncoSimul.internal <- function(rFE,
         stop("For initMutant you passed as many, or more genes, mutated ",
              "than the number of genes in the genotype (fitness effects).")
     }
-       
+
     } else {
         initMutant <- vector(mode = "integer")
         initMutantString <- ""
@@ -1884,7 +1971,7 @@ nr_oncoSimul.internal <- function(rFE,
                          lapply(rFE$long.epistasis, function(x) x$s),
                          lapply(rFE$long.orderEffects, function(x) x$s),
                          rFE$long.geneNoInt$s))
-        
+
         if(any(thes > 1 )) {
             m <- paste("You are using a Bozic model with",
                        "the new restriction specification, and you have",
@@ -1982,7 +2069,7 @@ nr_oncoSimul.internal <- function(rFE,
                 fixation_min_size <- as.integer(fixation[["fixation_min_size"]])
                 fixation <- fixation[-which(names(fixation) == "fixation_min_size")]
             }
-            
+
         } else {
             if(is_null_na(fixation["fixation_tolerance"])) {
                 fixation_tolerance <- 0
@@ -2050,7 +2137,7 @@ nr_oncoSimul.internal <- function(rFE,
                      typeFitness_ = typeFitness,
                      maxram = max.memory,
                      mutationPropGrowth = as.integer(mutationPropGrowth),
-                     initMutant_ = initMutant, 
+                     initMutant_ = initMutant,
                      maxWallTime = max.wall.time,
                      keepEvery = keepEvery,
                      K = K,
@@ -2146,7 +2233,7 @@ get.gene.counts <- function(x) {
         return(list(counts = counts,
                     freq = freq,
                     popSize = 0))
-    } 
+    }
     pop <- x$pops.by.time[the.time, -1]
     if(all(pop == 0)) {
         stop("You found a bug: this should never happen")
@@ -2154,7 +2241,7 @@ get.gene.counts <- function(x) {
     ## if(typeSample %in% c("wholeTumor", "whole")) {
     popSize <- x$PerSampleStats[the.time, 1]
     counts <- as.vector(tcrossprod(pop, x$Genotypes))
-    names(counts) <- x$geneNames    
+    names(counts) <- x$geneNames
     return(list(counts = counts,
                 freq = counts/popSize,
                 popSize = popSize))
@@ -2196,13 +2283,13 @@ geneCounts <- function(x) {
 ##     names(gnid) <- gg$Gene
 ##     ## FIXME: this later and conditional on what is in thee
 ##     gnid <- c("Root" = 0, gnid)
-    
+
 ##     if(!all(x$geneModule$Gene %in% names(gnid) ))
 ##         stop("Some genes not in reference fitnessEffects (rebasing geneModule)")
 ##     x$geneModule$GeneNumID <- gnid[geneModule$Gene]
 
-##     ## and then go over all the lists in the x object. 
-    
+##     ## and then go over all the lists in the x object.
+
 ##     if(nrow(x$long.geneNoInt)) {
 ##         ## now, mapping for the noInt if this is mutator
 ##         if(!all(x$long.geneNoInt$Gene %in% names(gnid) ))
@@ -2225,7 +2312,7 @@ matchGeneIDs <- function(x, refFE) {
         mutate(Reduced = replace(Reduced, is.na(Reduced), -9))
 }
 
-    
+
 detectionProbCheckParse <- function(x, initSize, verbosity) {
     default_p2 <- 0.1
     default_n2 <- 2 * initSize
@@ -2256,7 +2343,7 @@ detectionProbCheckParse <- function(x, initSize, verbosity) {
             stop("Names of some components of detectionProb are not recognized.",
                  " Check for possible typos.")
     }
-   
+
     ## This ain't conditional. If not given, always check
     if( !is_null_na(x["cPDetect"]) && (sum(!is_null_na(x["p2"]), !is_null_na(x["n2"])) >= 1 ))
         stop("Specify only cPDetect xor both of p2 and n2")
@@ -2289,12 +2376,12 @@ detectionProbCheckParse <- function(x, initSize, verbosity) {
                     default_n2, ", ", default_p2, "\n")
         }
     }
-    
+
     if(x["checkSizePEvery"] <= 0)
         stop("checkSizePEvery <= 0")
     if(x["PDBaseline"] <= 0)
         stop("PDBaseline <= 0")
-    
+
     if(!is_null_na(x["n2"])) {
         if(x["n2"] <= x["PDBaseline"])
             stop("n2 <= PDBaseline")
@@ -2356,13 +2443,13 @@ list_g_matches_fixed <- function(x, y) {
     ## genotypes/subset of genotypes.
 
     ## Yes, this function has tests too in test.fixation.R
-    
+
     ## All genotypes in x satisfy that they are supersets of at least one
     ## in y? That is true if, for every element in x, at least one y in
     ## that x.
 
     if(is.list(y)) y <- unlist(y)
-    
+
     y.nice <- lapply(y, nice.vector.eo, sep = ",")
     x.nice <- lapply(x, nice.vector.eo, sep = ",")
 
